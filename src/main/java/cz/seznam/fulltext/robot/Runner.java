@@ -2,17 +2,18 @@ package cz.seznam.fulltext.robot;
 
 import java.io.*;
 import java.util.*;
-import java.util.regex.*;
-
 
 public class Runner {
     private static final Map<String, String> processorClassMap = new HashMap<>();
     private static final int EXPECTED_PARTS_COUNT = 3;
+    private static final String TOP_PROCESSOR = "cz.seznam.fulltext.robot.TopProcessor";
+    private static final String CONTENT_TYPE_PROCESSOR = "cz.seznam.fulltext.robot.ContentTypeProcessor";
+    private static final String GREP_PROCESSOR = "cz.seznam.fulltext.robot.GrepProcessor";
 
     static {
-        processorClassMap.put("top", "cz.seznam.fulltext.robot.TopProcessor");
-        processorClassMap.put("contentType", "cz.seznam.fulltext.robot.ContentTypeProcessor");
-        processorClassMap.put("grep", "cz.seznam.fulltext.robot.GrepProcessor");
+        processorClassMap.put("top", TOP_PROCESSOR);
+        processorClassMap.put("contentType", CONTENT_TYPE_PROCESSOR);
+        processorClassMap.put("grep", GREP_PROCESSOR);
     }
 
     public static void main(String[] args) {
@@ -21,12 +22,25 @@ public class Runner {
                 System.out.println("Usage: java Runner <processorName> <inputFileName>");
                 System.exit(1);
             }
-
+    
             String processorName = args[0];
             String processorClassName = processorClassMap.get(processorName);
-
+    
             if (processorClassName != null) {
-                process(processorClassName, args[1]);
+                String[] processorArgs;
+    
+                if ("grep".equals(processorName) && args.length < 3) {
+                    System.out.println("Error: Additional arguments are missing for the 'grep' processor.");
+                    System.exit(1);
+                }
+    
+                if (args.length > 2) {
+                    processorArgs = Arrays.copyOfRange(args, 2, args.length);
+                } else {
+                    processorArgs = new String[0]; // Пустой массив аргументов
+                }
+    
+                process(processorClassName, args[1], processorArgs);
             } else {
                 System.out.println("Error: Invalid processor name.");
                 System.exit(1);
@@ -35,129 +49,38 @@ public class Runner {
             logError("An error occurred: " + e.getMessage(), e);
         }
     }
+    
 
-    static void process(String processorClassName, String inputFileName) {
-        try {
-            Class<?> processorClass = Class.forName(processorClassName);
-            Processor processor = (Processor) processorClass.newInstance();
+    static void process(String processorName, String inputFileName, String[] additionalArgs) {
+        Processor processor = ProcessorFactory.createProcessor(processorName, additionalArgs);
     
-            try (BufferedReader reader = new BufferedReader(new FileReader(inputFileName))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split("\t");
-                    if (parts.length == EXPECTED_PARTS_COUNT) {
-                        String url = parts[0];
-                        String contentType = parts[1];
-                        int clickCount = Integer.parseInt(parts[2]);
-                        processor.processData(url, contentType, clickCount);
-                    }
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFileName))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\t");
+                if (parts.length == EXPECTED_PARTS_COUNT) {
+                    String url = parts[0];
+                    String contentType = parts[1];
+                    int clickCount = Integer.parseInt(parts[2]);
+                    processor.processData(url, contentType, clickCount);
                 }
-    
-                processor.outputResults();
-            } catch (IOException e) {
-                logError("Error reading the input file: " + e.getMessage(), e);
             }
-        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-            logError("Error creating processor instance: " + e.getMessage(), e);
-        }
-    }    
     
+            if (processor instanceof GrepProcessor) {
+                ((GrepProcessor) processor).setArgs(additionalArgs);
+            }
+    
+            processor.outputResults();
+        } catch (IOException e) {
+            logError("Error reading the input file: " + e.getMessage(), e);
+        }
+    }
+    
+
     static void logError(String message, Exception e) {
         System.err.println("Error: " + message);
         if (e != null) {
             e.printStackTrace();
         }
-    }
-}
-
-interface Processor {
-    void processData(String url, String contentType, int clickCount);
-    void outputResults();
-}
-
-
-class TopProcessor implements Processor {
-
-    private static final int TOP_N = 10;
-    private PriorityQueue<Map.Entry<String, Integer>> topUrls;
-
-    public TopProcessor() {
-        topUrls = new PriorityQueue<>(
-            TOP_N, (entry1, entry2) -> entry1.getValue().compareTo(entry2.getValue())
-        );
-    }
-
-    @Override
-    public void processData(String url, String contentType, int clickCount) {
-        if (topUrls.size() < TOP_N) {
-            topUrls.offer(new AbstractMap.SimpleEntry<>(url, clickCount));
-        } else {
-            Map.Entry<String, Integer> smallest = topUrls.peek();
-            if (clickCount > smallest.getValue()) {
-                topUrls.poll();
-                topUrls.offer(new AbstractMap.SimpleEntry<>(url, clickCount));
-            }
-        }
-    }
-
-    @Override
-    public void outputResults() {
-        System.out.println("Outputting top 10 results...");
-        List<Map.Entry<String, Integer>> sortedEntries = new ArrayList<>();
-        while (!topUrls.isEmpty()) {
-            sortedEntries.add(topUrls.poll());
-        }
-        Collections.reverse(sortedEntries);
-
-        sortedEntries.forEach(entry -> System.out.println(entry.getKey() + "\t" + entry.getValue()));
-        System.out.println("Top results output complete.");
-    }
-}
-
-
-
-class ContentTypeProcessor implements Processor {
-    private Map<String, Integer> contentTypeCounts = new HashMap<>();
-
-    @Override
-    public void processData(String url, String contentType, int clickCount) {
-        contentTypeCounts.put(contentType, contentTypeCounts.getOrDefault(contentType, 0) + 1);
-    }
-
-    @Override
-    public void outputResults() {
-        System.out.println("Outputting content type results...");
-        contentTypeCounts.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> System.out.println(entry.getKey() + "\t" + entry.getValue()));
-        System.out.println("Content type results output complete.");
-    }
-}
-
-
-class GrepProcessor implements Processor {
-    private String regex;
-    private List<String> matchedLines = new ArrayList<>();
-
-    public GrepProcessor() {
-        // Пустой конструктор
-    }
-    
-    public GrepProcessor(String regex) {
-        this.regex = regex;
-    }
-
-    @Override
-    public void processData(String url, String contentType, int clickCount) {
-        if (Pattern.matches(regex, url)) {
-            matchedLines.add(url + "\t" + contentType + "\t" + clickCount);
-        }
-    }
-
-    @Override
-    public void outputResults() {
-        System.out.println("Outputting grep results...");
-        matchedLines.forEach(System.out::println);
-        System.out.println("Grep results output complete.");
     }
 }
