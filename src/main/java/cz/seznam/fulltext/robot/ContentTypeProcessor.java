@@ -5,10 +5,11 @@ import java.util.Map;
 
 class ContentTypeProcessor implements Processor {
     private Map<String, Integer> contentTypeCounts = new HashMap<>();
-    private String[] additionalArgs;
+    private String additionalArgs;
 
     @Override
     public void processData(String url, String contentType, int clickCount) {
+        // Count occurrences of content types
         contentTypeCounts.put(contentType, contentTypeCounts.getOrDefault(contentType, 0) + 1);
     }
 
@@ -22,8 +23,8 @@ class ContentTypeProcessor implements Processor {
     }
 
     @Override
-    public void setArgs(String[] additionalArgs) {
-        this.additionalArgs = additionalArgs; // Сохраняем дополнительные аргументы
-        // Добавьте здесь код для обработки дополнительных аргументов, если необходимо
+    public void setArgs(String additionalArgs) {
+        this.additionalArgs = additionalArgs; // Store additional arguments
+        // Add code here to process additional arguments if necessary
     }
 }

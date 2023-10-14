@@ -6,7 +6,7 @@ public class ProcessorFactory {
     private static final String CONTENT_TYPE_PROCESSOR = "cz.seznam.fulltext.robot.ContentTypeProcessor";
     private static final String GREP_PROCESSOR = "cz.seznam.fulltext.robot.GrepProcessor";
 
-    public static Processor createProcessor(String processorName, String[] additionalArgs) {
+    public static Processor createProcessor(String processorName, String additionalArgs) {
         if (TOP_PROCESSOR.equals(processorName)) {
             return new TopProcessor();
         } else if (CONTENT_TYPE_PROCESSOR.equals(processorName)) {
@@ -20,5 +20,3 @@ public class ProcessorFactory {
         }
     }
 }
-
-

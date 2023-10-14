@@ -1,5 +1,7 @@
 cz/seznam/fulltext/robot/ContentTypeProcessor.class
+cz/seznam/fulltext/robot/Runner$CommandLineArgs.class
 cz/seznam/fulltext/robot/Processor.class
 cz/seznam/fulltext/robot/TopProcessor.class
-cz/seznam/fulltext/robot/GrepProcessor.class
 cz/seznam/fulltext/robot/Runner.class
+cz/seznam/fulltext/robot/ProcessorFactory.class
+cz/seznam/fulltext/robot/GrepProcessor.class

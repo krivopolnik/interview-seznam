@@ -1,5 +1,6 @@
 package cz.seznam.fulltext.robot;
 
-public class string {
+
+public class RunnerTest {
 
 }
