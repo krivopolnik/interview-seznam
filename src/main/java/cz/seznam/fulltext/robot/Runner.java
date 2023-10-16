@@ -34,7 +34,7 @@ public class Runner {
     }
 
     // Process command line arguments and return a CommandLineArgs object
-    private static CommandLineArgs processCommandLineArgs(String[] args) throws IllegalArgumentException {
+    static CommandLineArgs processCommandLineArgs(String[] args) throws IllegalArgumentException {
         if (args.length < 2) {
             throw new IllegalArgumentException("Usage: java Runner <processorName> <inputFileName>");
         }
@@ -69,7 +69,7 @@ public class Runner {
         }
     }
 
-    private static class CommandLineArgs {
+    public static class CommandLineArgs {
         String processorName;
         String processorClassName;
         String additionalArgs;
